@@ -5,8 +5,7 @@
 
 void DB::start()
 {
-    while (true)
-    {
+    while (true) {
         print_prompt();
         
         std::string input_line;
@@ -16,6 +15,14 @@ void DB::start()
         {
             continue;
         }
+
+	Statement statement;
+
+	if (parse_statement(input_line, statement)) {
+		continue;
+	}
+
+	execute_statement(statement);
     }
 }
 

@@ -44,3 +44,28 @@ PrepareResult DB::prepare_statement(std::string &input_line, Statement &statemen
         return PREPARE_UNRECOGNIZED_STATEMENT;
     }
 }
+
+bool DB::parse_statement(std::string &input_line, Statement &statement)
+{
+    switch (prepare_statement(input_line, statement))
+    {
+    case PREPARE_SUCCESS:
+        return false;
+    case PREPARE_UNRECOGNIZED_STATEMENT:
+        std::cout << "Unrecognized keyword at start of '" << input_line << "'." << std::endl;
+        return true;
+    }
+    return false;
+}
+void DB::execute_statement(Statement &statement)
+{
+    switch (statement.type)
+    {
+    case STATEMENT_INSERT:
+        std::cout << "Executing insert statement" << std::endl;
+        break;
+    case STATEMENT_SELECT:
+        std::cout << "Executing select statement" << std::endl;
+        break;
+    }
+}

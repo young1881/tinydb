@@ -17,12 +17,12 @@ describe 'database' do
   it 'test exit and unrecognized command' do
     result = run_script([
       "hello world",
-      "HELLO WORLD",
+      ".HELLO WORLD",
       ".exit",
     ])
     expect(result).to match_array([
-      "db > Unrecognized command: hello world",
-      "db > Unrecognized command: HELLO WORLD",
+      "db > Unrecognized keyword at start of 'hello world'.",
+      "db > Unrecognized command: .HELLO WORLD",
       "db > Bye!",
     ])
   end

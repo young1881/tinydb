@@ -1,2 +1,2 @@
 g++ *.cpp -o main
-rspec test_db.rb
+rspec spec test_db.rb

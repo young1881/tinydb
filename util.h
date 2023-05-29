@@ -22,4 +22,9 @@ enum PrepareResult
         PREPARE_UNRECOGNIZED_STATEMENT
     };
 
+class Statement {
+	public:
+		StatementType type;
+};
+
 #endif
