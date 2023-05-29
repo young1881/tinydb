@@ -1,0 +1,15 @@
+*
+
+!.gitignore
+
+!*.cpp
+!*.c
+!*.h
+!makefile
+!*.rb
+
+!test.sh
+
+!README.md
+
+

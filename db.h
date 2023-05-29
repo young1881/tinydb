@@ -13,7 +13,8 @@ public:
     void print_prompt();
 
     bool parse_meta_command(std::string command);
-    
+    MetaCommandResult do_meta_command(std::string command);
+    PrepareResult prepare_statement(std::string &input_line, Statement &statement)
 };
 
 #endif

@@ -1,34 +1,8 @@
 #include <iostream>
 #include <string>
+#include "db.h"
 
-class DB
-{
-public:
-    void start();
-    void print_prompt();
 
-    bool parse_meta_command(std::string command);
-};
-
-void DB::print_prompt()
-{
-    std::cout << "db > ";
-}
-
-bool DB::parse_meta_command(std::string command)
-{
-    if (command == ".exit")
-    {
-        std::cout << "Bye!" << std::endl;
-        exit(EXIT_SUCCESS);
-    }
-    else
-    {
-        std::cout << "Unrecognized command: " << command << std::endl;
-        return true;
-    }
-    return false;
-}
 void DB::start()
 {
     while (true)
@@ -45,9 +19,7 @@ void DB::start()
     }
 }
 
-int main(int argc, char const *argv[])
+void DB::print_prompt()
 {
-    DB db;
-    db.start();
-    return 0;
+    std::cout << "db > ";
 }
