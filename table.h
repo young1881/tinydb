@@ -13,8 +13,20 @@ class Row
 {
 public:
     uint32_t id;
-    char username[COLUMN_USERNAME_SIZE];
-    char email[COLUMN_EMAIL_SIZE];
+    char username[COLUMN_USERNAME_SIZE + 1];
+    char email[COLUMN_EMAIL_SIZE + 1];
+    Row()
+    {
+        id = 0;
+        username[0] = '\0';
+        email[0] = '\0';
+    }
+    Row(u_int32_t id, const char *username, const char *email)
+    {
+        this->id = id;
+        strncpy(this->username, username, COLUMN_USERNAME_SIZE + 1);
+        strncpy(this->email, email, COLUMN_EMAIL_SIZE + 1);
+    }
 };
 
 const uint32_t ID_SIZE = size_of_attribute(Row, id);

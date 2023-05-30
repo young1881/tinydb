@@ -22,6 +22,8 @@ enum PrepareResult
     PREPARE_SUCCESS,
     PREPARE_UNRECOGNIZED_STATEMENT,
     PREPARE_SYNTAX_ERROR,
+    PREPARE_NEGATIVE_ID,
+    PREPARE_TOO_LONG_STRING,
 };
 
 enum ExecuteResult
@@ -45,8 +47,11 @@ public:
 
     bool parse_meta_command(std::string command);
     MetaCommandResult do_meta_command(std::string command);
+
     PrepareResult prepare_statement(std::string &input_line, Statement &statement);
+    PrepareResult prepare_insert(std::string &input_line, Statement &statement);
     bool parse_statement(std::string &input_line, Statement &statement);
+    
     void execute_statement(Statement &statement, Table &table);
     ExecuteResult execute_insert(Statement &statement, Table &table);
     ExecuteResult execute_select(Statement &statement, Table &table);

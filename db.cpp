@@ -65,17 +65,7 @@ PrepareResult DB::prepare_statement(std::string &input_line, Statement &statemen
 {
     if (!input_line.compare(0, 6, "insert"))
     {
-        statement.type = STATEMENT_INSERT;
-        int args_assigned = std::sscanf(
-            input_line.c_str(), "insert %d %s %s", 
-            &(statement.row_to_insert.id),
-            statement.row_to_insert.username,
-            statement.row_to_insert.email);
-        if (args_assigned < 3)
-        {
-            return PREPARE_SYNTAX_ERROR;
-        }
-        return PREPARE_SUCCESS;
+        return prepare_insert(input_line, statement);
     }
     else if (!input_line.compare(0, 6, "select"))
     {
@@ -88,14 +78,47 @@ PrepareResult DB::prepare_statement(std::string &input_line, Statement &statemen
     }
 }
 
+PrepareResult DB::prepare_insert(std::string &input_line, Statement &statement)
+{
+    statement.type = STATEMENT_INSERT;
+
+    char *insert_line = (char *)input_line.c_str();
+    char *keyword = strtok(insert_line, " ");
+    char *id_string = strtok(NULL, " ");
+    char *username = strtok(NULL, " ");
+    char *email = strtok(NULL, " ");
+
+    if (id_string == NULL || username == NULL || email == NULL)
+    {
+        return PREPARE_SYNTAX_ERROR;
+    }
+    int id = atoi(id_string);
+    if (id < 0) {
+        return PREPARE_NEGATIVE_ID;
+    }
+    if (strlen(username) > COLUMN_USERNAME_SIZE || strlen(email) > COLUMN_EMAIL_SIZE)
+    {
+        return PREPARE_TOO_LONG_STRING;
+    }
+    
+    statement.row_to_insert = Row(id, username, email);
+    return PREPARE_SUCCESS;
+}
+
 bool DB::parse_statement(std::string &input_line, Statement &statement)
 {
     switch (prepare_statement(input_line, statement))
     {
     case PREPARE_SUCCESS:
         return false;
-        case PREPARE_SYNTAX_ERROR:
+    case PREPARE_SYNTAX_ERROR:
         std::cout << "Syntax error. Could not parse statement." << std::endl;
+        return true;
+    case PREPARE_NEGATIVE_ID:
+        std::cout << "ID must be positive." << std::endl;
+        return true;
+    case PREPARE_TOO_LONG_STRING:
+        std::cout << "String is too long." << std::endl;
         return true;
     case PREPARE_UNRECOGNIZED_STATEMENT:
         std::cout << "Unrecognized keyword at start of '" << input_line << "'." << std::endl;
