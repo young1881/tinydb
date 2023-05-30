@@ -4,7 +4,13 @@
 
 int main(int argc, char const *argv[])
 {
-    DB db;
+    if (argc < 2)
+    {
+        std::cout << "Must supply a database filename." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    
+    DB db(argv[1]);
     db.start();
     return 0;
 }

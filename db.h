@@ -41,7 +41,15 @@ public:
 
 class DB
 {
+private:
+    Table* table;
+
 public:
+    DB(const char *filename)
+    {
+        table = new Table(filename);
+    }
+
     void start();
     void print_prompt();
 
@@ -52,8 +60,13 @@ public:
     PrepareResult prepare_insert(std::string &input_line, Statement &statement);
     bool parse_statement(std::string &input_line, Statement &statement);
     
-    void execute_statement(Statement &statement, Table &table);
-    ExecuteResult execute_insert(Statement &statement, Table &table);
-    ExecuteResult execute_select(Statement &statement, Table &table);
+    void execute_statement(Statement &statement);
+    ExecuteResult execute_insert(Statement &statement);
+    ExecuteResult execute_select(Statement &statement);
+
+    ~DB()
+    {
+        delete table;
+    }
 };
 #endif

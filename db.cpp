@@ -2,8 +2,6 @@
 
 void DB::start()
 {
-    Table table;
-
     while (true)
     {
         print_prompt();
@@ -23,7 +21,7 @@ void DB::start()
             continue;
         }
 
-        execute_statement(statement, table);
+        execute_statement(statement);
     }
 }
 
@@ -52,6 +50,7 @@ MetaCommandResult DB::do_meta_command(std::string command)
 {
     if (command == ".exit")
     {
+        delete(table);
         std::cout << "Bye!" << std::endl;
         exit(EXIT_SUCCESS);
     }
@@ -129,16 +128,16 @@ bool DB::parse_statement(std::string &input_line, Statement &statement)
     return false;
 }
 
-void DB::execute_statement(Statement &statement, Table &table)
+void DB::execute_statement(Statement &statement)
 {
     ExecuteResult result;
     switch (statement.type)
     {
     case STATEMENT_INSERT:
-        result = execute_insert(statement, table);
+        result = execute_insert(statement);
         break;
     case STATEMENT_SELECT:
-        result = execute_select(statement, table);
+        result = execute_select(statement);
         break;
     }
 
@@ -153,27 +152,27 @@ void DB::execute_statement(Statement &statement, Table &table)
     }
 }
 
-ExecuteResult DB::execute_insert(Statement &statement, Table &table)
+ExecuteResult DB::execute_insert(Statement &statement)
 {
-    if (table.num_rows >= TABLE_MAX_ROWS)
+    if (table->num_rows >= TABLE_MAX_ROWS)
     {
         std::cout << "Error: Table full." << std::endl;
         return EXECUTE_TABLE_FULL;
     }
 
-    void *page = row_slot(table, table.num_rows);
+    void *page = table->row_slot(table->num_rows);
     serialize_row(statement.row_to_insert, page);
-    table.num_rows++;
+    table->num_rows++;
 
     return EXECUTE_SUCCESS;
 }
 
-ExecuteResult DB::execute_select(Statement &statement, Table &table)
+ExecuteResult DB::execute_select(Statement &statement)
 {
-    for (uint32_t i = 0; i < table.num_rows; i++)
+    for (uint32_t i = 0; i < table->num_rows; i++)
     {
         Row row;
-        void *page = row_slot(table, i);
+        void *page = table->row_slot(i);
         deserialize_row(page, row);
         std::cout << "(" << row.id << ", " << row.username << ", " << row.email << ")" << std::endl;
     }
