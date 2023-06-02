@@ -69,7 +69,20 @@ public:
     void *row_slot(uint32_t row_num);
 };
 
-void serialize_row(Row &source, void *destination);
+class Cursor
+{
+public:
+    Table *table;
+    uint32_t row_num;
+    bool end_of_table;
+
+    Cursor(Table *&table, bool option);
+    void *cursor_value();
+    void cursor_advance();
+};
+
+void
+serialize_row(Row &source, void *destination);
 void deserialize_row(void *source, Row &destination);
 void *row_slot(Table &table, uint32_t row_num);
 

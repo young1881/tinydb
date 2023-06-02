@@ -160,8 +160,9 @@ ExecuteResult DB::execute_insert(Statement &statement)
         return EXECUTE_TABLE_FULL;
     }
 
-    void *page = table->row_slot(table->num_rows);
-    serialize_row(statement.row_to_insert, page);
+    Cursor *cursor = new Cursor(table, false);
+
+    serialize_row(statement.row_to_insert, cursor->cursor_value());
     table->num_rows++;
 
     return EXECUTE_SUCCESS;
@@ -169,13 +170,17 @@ ExecuteResult DB::execute_insert(Statement &statement)
 
 ExecuteResult DB::execute_select(Statement &statement)
 {
-    for (uint32_t i = 0; i < table->num_rows; i++)
-    {
-        Row row;
-        void *page = table->row_slot(i);
-        deserialize_row(page, row);
-        std::cout << "(" << row.id << ", " << row.username << ", " << row.email << ")" << std::endl;
-    }
+    Cursor * cursor = new Cursor(table, true);
 
+    Row row;
+    while (!cursor->end_of_table)
+    {
+        deserialize_row(cursor->cursor_value(), row);
+        std::cout << "(" << row.id << ", " << row.username << ", " << row.email << ")" << std::endl;
+        cursor->cursor_advance();
+
+    }
+    delete cursor;
+    
     return EXECUTE_SUCCESS;
 }

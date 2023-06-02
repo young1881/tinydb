@@ -21,11 +21,12 @@ void *Pager::get_page(uint32_t page_num)
     if (page_num > TABLE_MAX_PAGES)
     {
         std::cout << "Tried to fetch page number out of bounds." << page_num << " > "
-                << TABLE_MAX_PAGES << std::endl;
+                  << TABLE_MAX_PAGES << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    if (pages[page_num] == nullptr) {
+    if (pages[page_num] == nullptr)
+    {
         // Cache miss. Allocate memory and load from file.
         void *page = malloc(PAGE_SIZE);
         uint32_t num_pages = file_length / PAGE_SIZE;
@@ -125,6 +126,41 @@ Table::~Table()
     }
 }
 
+Cursor::Cursor(Table *&table, bool option)
+{
+    this->table = table;
+    if (option)
+    {
+        // start at the beginning of table;
+        row_num = 0;
+        end_of_table = (table->num_rows == 0);
+    }
+    else
+    {
+        // end of the table
+        row_num = table->num_rows;
+        end_of_table = true;
+    }
+}
+
+void *Cursor::cursor_value()
+{
+    uint32_t page_num = row_num / ROWS_PER_PAGE;
+    void *page = table->pager.get_page(page_num);
+    uint32_t row_offset = row_num % ROWS_PER_PAGE;
+    uint32_t byte_offset = row_offset * ROW_SIZE;
+    return (char *)page + byte_offset;
+}
+
+void Cursor::cursor_advance()
+{
+    row_num += 1;
+    if (row_num >= table->num_rows)
+    {
+        end_of_table = true;
+    }
+}
+
 void serialize_row(Row &source, void *destination)
 {
     memcpy((char *)destination + ID_OFFSET, &(source.id), ID_SIZE);
@@ -148,16 +184,16 @@ void *Table::row_slot(uint32_t row_num)
     return (char *)page + byte_offset;
 }
 
-void *row_slot(Table &table, uint32_t row_num)
-{
-    uint32_t page_num = row_num / ROWS_PER_PAGE;
-    void *page = table.pages[page_num];
-    if (page == NULL)
-    {
-        // Allocate memory only when we try to access page
-        page = table.pages[page_num] = malloc(PAGE_SIZE);
-    }
-    uint32_t row_offset = row_num % ROWS_PER_PAGE;
-    uint32_t byte_offset = row_offset * ROW_SIZE;
-    return (char *)page + byte_offset;
-}
+// void *row_slot(Table &table, uint32_t row_num)
+// {
+//     uint32_t page_num = row_num / ROWS_PER_PAGE;
+//     void *page = table.pages[page_num];
+//     if (page == NULL)
+//     {
+//         // Allocate memory only when we try to access page
+//         page = table.pages[page_num] = malloc(PAGE_SIZE);
+//     }
+//     uint32_t row_offset = row_num % ROWS_PER_PAGE;
+//     uint32_t byte_offset = row_offset * ROW_SIZE;
+//     return (char *)page + byte_offset;
+// }
