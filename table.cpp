@@ -9,6 +9,13 @@ Pager::Pager(const char *filename)
         exit(EXIT_FAILURE);
     }
     file_length = lseek(file_descriptor, 0, SEEK_END);
+    num_pages = file_length / PAGE_SIZE;
+
+    if (file_length % PAGE_SIZE != 0)
+    {
+        std::cerr << "Db file is not a whole number of pages. Corrupt file." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     for (uint32_t i = 0; i < TABLE_MAX_PAGES; i++)
     {
@@ -49,12 +56,17 @@ void *Pager::get_page(uint32_t page_num)
         }
 
         pages[page_num] = page;
+
+        if (page_num >= num_pages)
+        {
+            this->num_pages = page_num + 1;
+        }
     }
 
     return pages[page_num];
 }
 
-void Pager::pager_flush(uint32_t page_num, uint32_t size)
+void Pager::pager_flush(uint32_t page_num)
 {
     if (pages[page_num] == nullptr)
     {
@@ -71,7 +83,7 @@ void Pager::pager_flush(uint32_t page_num, uint32_t size)
     }
 
     ssize_t bytes_written =
-        write(file_descriptor, pages[page_num], size);
+        write(file_descriptor, pages[page_num], PAGE_SIZE);
 
     if (bytes_written == -1)
     {
@@ -82,31 +94,15 @@ void Pager::pager_flush(uint32_t page_num, uint32_t size)
 
 Table::~Table()
 {
-    uint32_t num_full_pages = num_rows / ROWS_PER_PAGE;
-
-    for (uint32_t i = 0; i < num_full_pages; i++)
+    for (uint32_t i = 0; i < pager.num_pages; i++)
     {
         if (pager.pages[i] == nullptr)
         {
             continue;
         }
-        pager.pager_flush(i, PAGE_SIZE);
+        pager.pager_flush(i);
         free(pager.pages[i]);
         pager.pages[i] = nullptr;
-    }
-
-    // There may be a partial page to write to the end of the file
-    // This should not be needed after we switch to a B-tree
-    uint32_t num_additional_rows = num_rows % ROWS_PER_PAGE;
-    if (num_additional_rows > 0)
-    {
-        uint32_t page_num = num_full_pages;
-        if (pager.pages[page_num] != nullptr)
-        {
-            pager.pager_flush(page_num, num_additional_rows * ROW_SIZE);
-            free(pager.pages[page_num]);
-            pager.pages[page_num] = nullptr;
-        }
     }
 
     int result = close(pager.file_descriptor);
@@ -129,36 +125,65 @@ Table::~Table()
 Cursor::Cursor(Table *&table, bool option)
 {
     this->table = table;
+    page_num = table->root_page_num;
+    LeafNode root_node = table->pager.get_page(table->root_page_num);
+    uint32_t num_cells = *root_node.leaf_node_num_cells();
     if (option)
     {
         // start at the beginning of table;
-        row_num = 0;
-        end_of_table = (table->num_rows == 0);
+        cell_num = 0;
+        end_of_table = (num_cells == 0);
     }
     else
     {
         // end of the table
-        row_num = table->num_rows;
+        cell_num = num_cells;
         end_of_table = true;
     }
 }
 
 void *Cursor::cursor_value()
 {
-    uint32_t page_num = row_num / ROWS_PER_PAGE;
     void *page = table->pager.get_page(page_num);
-    uint32_t row_offset = row_num % ROWS_PER_PAGE;
-    uint32_t byte_offset = row_offset * ROW_SIZE;
-    return (char *)page + byte_offset;
+    return LeafNode(page).leaf_node_value(cell_num);
 }
 
 void Cursor::cursor_advance()
 {
-    row_num += 1;
-    if (row_num >= table->num_rows)
+    LeafNode leaf_node = table->pager.get_page(page_num);
+    cell_num += 1;
+    if (cell_num >= *leaf_node.leaf_node_num_cells())
     {
         end_of_table = true;
     }
+}
+
+void Cursor::leaf_node_insert(uint32_t key, Row &value)
+{
+    LeafNode leaf_node = table->pager.get_page(page_num);
+    uint32_t num_cells = *leaf_node.leaf_node_num_cells();
+
+    if (num_cells >= LEAF_NODE_MAX_CELLS)
+    {
+        // Node full
+        std::cout << "Need to implement splitting a leaf node." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (cell_num < num_cells)
+    {
+        // make room for new cell
+        for (uint32_t i = num_cells; i > cell_num; i--)
+        {
+            memcpy(leaf_node.leaf_node_cell(i), leaf_node.leaf_node_cell(i - 1),
+                   LEAF_NODE_CELL_SIZE);
+        }
+    }
+
+    // insert new cell
+    *(leaf_node.leaf_node_num_cells()) += 1;
+    *(leaf_node.leaf_node_key(cell_num)) = key;
+    serialize_row(value, leaf_node.leaf_node_value(cell_num));
 }
 
 void serialize_row(Row &source, void *destination)
@@ -175,14 +200,14 @@ void deserialize_row(void *source, Row &destination)
     memcpy(&(destination.email), (char *)source + EMAIL_OFFSET, EMAIL_SIZE);
 }
 
-void *Table::row_slot(uint32_t row_num)
-{
-    uint32_t page_num = row_num / ROWS_PER_PAGE;
-    void *page = pager.get_page(page_num);
-    uint32_t row_offset = row_num % ROWS_PER_PAGE;
-    uint32_t byte_offset = row_offset * ROW_SIZE;
-    return (char *)page + byte_offset;
-}
+// void *Table::row_slot(uint32_t row_num)
+// {
+//     uint32_t page_num = row_num / ROWS_PER_PAGE;
+//     void *page = pager.get_page(page_num);
+//     uint32_t row_offset = row_num % ROWS_PER_PAGE;
+//     uint32_t byte_offset = row_offset * ROW_SIZE;
+//     return (char *)page + byte_offset;
+// }
 
 // void *row_slot(Table &table, uint32_t row_num)
 // {

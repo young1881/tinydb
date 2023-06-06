@@ -54,6 +54,24 @@ MetaCommandResult DB::do_meta_command(std::string command)
         std::cout << "Bye!" << std::endl;
         exit(EXIT_SUCCESS);
     }
+    else if (command == ".btree")
+    {
+        std::cout << "Tree:" << std::endl;
+        LeafNode root_node = table->pager.get_page(table->root_page_num);
+        root_node.print_leaf_node();
+        return META_COMMAND_SUCCESS;
+    }
+    else if (command == ".constants")
+    {
+        std::cout << "Constants:" << std::endl;
+        std::cout << "ROW_SIZE: " << ROW_SIZE << std::endl;
+        std::cout << "COMMON_NODE_HEADER_SIZE: " << COMMON_NODE_HEADER_SIZE << std::endl;
+        std::cout << "LEAF_NODE_HEADER_SIZE: " << LEAF_NODE_HEADER_SIZE << std::endl;
+        std::cout << "LEAF_NODE_CELL_SIZE: " << LEAF_NODE_CELL_SIZE << std::endl;
+        std::cout << "LEAF_NODE_SPACE_FOR_CELLS: " << LEAF_NODE_SPACE_FOR_CELLS << std::endl;
+        std::cout << "LEAF_NODE_MAX_CELLS: " << LEAF_NODE_MAX_CELLS << std::endl;
+        return META_COMMAND_SUCCESS;
+    }
     else
     {
         return META_COMMAND_UNRECOGNIZED_COMMAND;
@@ -154,16 +172,19 @@ void DB::execute_statement(Statement &statement)
 
 ExecuteResult DB::execute_insert(Statement &statement)
 {
-    if (table->num_rows >= TABLE_MAX_ROWS)
+    LeafNode leaf_node = table->pager.get_page(table->root_page_num);
+    if (*(leaf_node.leaf_node_num_cells()) >= LEAF_NODE_MAX_CELLS)
     {
-        std::cout << "Error: Table full." << std::endl;
+        std::cout << "Leaf node full." << std::endl;
         return EXECUTE_TABLE_FULL;
     }
 
+    // end of the table
     Cursor *cursor = new Cursor(table, false);
 
-    serialize_row(statement.row_to_insert, cursor->cursor_value());
-    table->num_rows++;
+    cursor->leaf_node_insert(statement.row_to_insert.id, statement.row_to_insert);
+
+    delete cursor;
 
     return EXECUTE_SUCCESS;
 }
